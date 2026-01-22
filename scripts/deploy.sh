@@ -31,17 +31,23 @@ usage() {
     echo "Usage: $0 [OPTION] [APP_NAME]"
     echo ""
     echo "Options:"
-    echo "  --all              Deploy all infrastructure and applications"
-    echo "  --infrastructure   Deploy only infrastructure (Traefik, Portainer, Monitoring)"
-    echo "  --app APP_NAME     Deploy specific application"
-    echo "  --stop APP_NAME    Stop specific application"
-    echo "  --restart APP_NAME Restart specific application"
-    echo "  --logs APP_NAME    View logs for specific application"
-    echo "  --list             List all available applications"
+    echo "  --all                Deploy all infrastructure and applications"
+    echo "  --infrastructure     Deploy all infrastructure (Traefik, Portainer, Monitoring)"
+    echo "  --traefik            Deploy only Traefik reverse proxy"
+    echo "  --portainer          Deploy only Portainer (Docker management UI)"
+    echo "  --monitoring         Deploy only monitoring stack (Prometheus, Grafana, etc.)"
+    echo "  --app APP_NAME       Deploy specific application"
+    echo "  --stop APP_NAME      Stop specific application"
+    echo "  --restart APP_NAME   Restart specific application"
+    echo "  --logs APP_NAME      View logs for specific application"
+    echo "  --list               List all available applications"
     echo ""
     echo "Examples:"
     echo "  $0 --all"
     echo "  $0 --infrastructure"
+    echo "  $0 --traefik"
+    echo "  $0 --portainer"
+    echo "  $0 --monitoring"
     echo "  $0 --app wordpress"
     echo "  $0 --logs nodejs-api"
     exit 1
@@ -115,6 +121,86 @@ deploy_infrastructure() {
     docker-compose --env-file "$PROJECT_ROOT/.env" up -d
 
     echo -e "${GREEN}✓ Infrastructure deployed${NC}"
+}
+
+# Function to deploy only Traefik
+deploy_traefik() {
+    echo -e "${GREEN}Deploying Traefik...${NC}"
+
+    # Check and fix network labels if needed
+    if docker network inspect web >/dev/null 2>&1; then
+        NETWORK_LABEL=$(docker network inspect web --format='{{index .Labels "com.docker.compose.network"}}' 2>/dev/null || echo "")
+
+        if [ "$NETWORK_LABEL" != "web" ]; then
+            echo -e "${YELLOW}Network 'web' has incorrect labels. Recreating...${NC}"
+
+            CONNECTED_CONTAINERS=$(docker network inspect web --format='{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || echo "")
+
+            if [ -n "$CONNECTED_CONTAINERS" ]; then
+                echo "Disconnecting containers from network..."
+                for container in $CONNECTED_CONTAINERS; do
+                    echo "  Disconnecting $container..."
+                    docker network disconnect -f web "$container" 2>/dev/null || true
+                done
+            fi
+
+            docker network rm web 2>/dev/null || true
+            echo -e "${GREEN}✓ Old network removed${NC}"
+        fi
+    fi
+
+    # Deploy Traefik
+    cd "$PROJECT_ROOT"
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d traefik
+
+    echo -e "${GREEN}✓ Traefik deployed${NC}"
+    echo ""
+    echo "Access Traefik dashboard at: https://${TRAEFIK_SUBDOMAIN}.${DOMAIN}"
+    echo "Default credentials: admin/admin (CHANGE IN PRODUCTION!)"
+}
+
+# Function to deploy only Portainer
+deploy_portainer() {
+    echo -e "${GREEN}Deploying Portainer...${NC}"
+
+    # Ensure network exists
+    if ! docker network inspect web >/dev/null 2>&1; then
+        echo -e "${YELLOW}Creating 'web' network...${NC}"
+        docker network create web
+    fi
+
+    cd "$PROJECT_ROOT/infrastructure/portainer"
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
+
+    echo -e "${GREEN}✓ Portainer deployed${NC}"
+    echo ""
+    echo "Access Portainer at: https://${PORTAINER_SUBDOMAIN}.${DOMAIN}"
+    echo "First login will prompt you to create admin user"
+}
+
+# Function to deploy only Monitoring stack
+deploy_monitoring() {
+    echo -e "${GREEN}Deploying Monitoring Stack...${NC}"
+
+    # Ensure network exists
+    if ! docker network inspect web >/dev/null 2>&1; then
+        echo -e "${YELLOW}Creating 'web' network...${NC}"
+        docker network create web
+    fi
+
+    cd "$PROJECT_ROOT/infrastructure/monitoring"
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
+
+    echo -e "${GREEN}✓ Monitoring Stack deployed${NC}"
+    echo ""
+    echo "Services deployed:"
+    echo "  - Grafana:        https://${GRAFANA_SUBDOMAIN}.${DOMAIN}"
+    echo "  - Prometheus:     https://${PROMETHEUS_SUBDOMAIN}.${DOMAIN}"
+    echo "  - Alertmanager:   https://${ALERTMANAGER_SUBDOMAIN}.${DOMAIN}"
+    echo ""
+    echo "Grafana credentials:"
+    echo "  Username: ${GRAFANA_ADMIN_USER}"
+    echo "  Password: ${GRAFANA_ADMIN_PASSWORD}"
 }
 
 # Function to deploy application
@@ -226,6 +312,15 @@ case "$1" in
         ;;
     --infrastructure)
         deploy_infrastructure
+        ;;
+    --traefik)
+        deploy_traefik
+        ;;
+    --portainer)
+        deploy_portainer
+        ;;
+    --monitoring)
+        deploy_monitoring
         ;;
     --app)
         if [ -z "$2" ]; then

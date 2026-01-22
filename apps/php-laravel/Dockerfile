@@ -22,12 +22,24 @@ WORKDIR /var/www/html
 # Copy application files
 COPY ./app /var/www/html
 
-# Install Laravel dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install Laravel dependencies (only if composer.json exists)
+RUN if [ -f composer.json ]; then \
+        composer install --no-dev --optimize-autoloader --no-interaction; \
+    else \
+        echo "<?php phpinfo(); ?>" > index.php; \
+        echo "No Laravel application found. Please install Laravel in the app directory."; \
+        echo "Visit the documentation for setup instructions."; \
+    fi
 
-# Set permissions
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Set permissions (only if Laravel directories exist)
+RUN if [ -d storage ] && [ -d bootstrap/cache ]; then \
+        chown -R www-data:www-data storage bootstrap/cache && \
+        chmod -R 775 storage bootstrap/cache; \
+    else \
+        mkdir -p storage bootstrap/cache && \
+        chown -R www-data:www-data storage bootstrap/cache && \
+        chmod -R 775 storage bootstrap/cache; \
+    fi
 
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/http.d/default.conf
