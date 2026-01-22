@@ -69,11 +69,33 @@ deploy_infrastructure() {
 
     # Remove existing network if it exists without proper labels
     if docker network inspect web >/dev/null 2>&1; then
-        # Check if network has any containers
-        NETWORK_CONTAINERS=$(docker network inspect web --format='{{range .Containers}}{{.Name}} {{end}}')
-        if [ -z "$NETWORK_CONTAINERS" ]; then
-            echo "Removing existing 'web' network to recreate with proper labels..."
+        echo "Checking 'web' network labels..."
+
+        # Check if network has the correct Docker Compose label
+        NETWORK_LABEL=$(docker network inspect web --format='{{index .Labels "com.docker.compose.network"}}' 2>/dev/null || echo "")
+
+        if [ "$NETWORK_LABEL" != "web" ]; then
+            echo -e "${YELLOW}Network 'web' has incorrect labels. Recreating...${NC}"
+
+            # Get all containers connected to the network
+            CONNECTED_CONTAINERS=$(docker network inspect web --format='{{range .Containers}}{{.Name}} {{end}}' 2>/dev/null || echo "")
+
+            # Disconnect all containers
+            if [ -n "$CONNECTED_CONTAINERS" ]; then
+                echo "Disconnecting containers from network..."
+                for container in $CONNECTED_CONTAINERS; do
+                    echo "  Disconnecting $container..."
+                    docker network disconnect -f web "$container" 2>/dev/null || true
+                done
+            fi
+
+            # Remove the network
+            echo "Removing old network..."
             docker network rm web 2>/dev/null || true
+
+            echo -e "${GREEN}✓ Old network removed${NC}"
+        else
+            echo -e "${GREEN}✓ Network has correct labels${NC}"
         fi
     fi
 
@@ -107,8 +129,22 @@ deploy_app() {
 
     # Ensure the web network exists
     if ! docker network inspect web >/dev/null 2>&1; then
-        echo -e "${YELLOW}Creating 'web' network...${NC}"
+        echo -e "${YELLOW}⚠ 'web' network does not exist.${NC}"
+        echo -e "${YELLOW}It's recommended to deploy infrastructure first:${NC}"
+        echo -e "${YELLOW}  ./scripts/deploy.sh --infrastructure${NC}"
+        echo ""
+        echo -e "${YELLOW}Creating basic 'web' network for now...${NC}"
         docker network create web
+        echo -e "${YELLOW}⚠ Note: This network won't have Docker Compose labels.${NC}"
+        echo -e "${YELLOW}⚠ Redeploy infrastructure later to fix this.${NC}"
+    else
+        # Check if network has correct labels
+        NETWORK_LABEL=$(docker network inspect web --format='{{index .Labels "com.docker.compose.network"}}' 2>/dev/null || echo "")
+        if [ "$NETWORK_LABEL" != "web" ]; then
+            echo -e "${YELLOW}⚠ Network 'web' exists but has incorrect labels.${NC}"
+            echo -e "${YELLOW}⚠ This may cause warnings. To fix, run:${NC}"
+            echo -e "${YELLOW}  ./scripts/deploy.sh --infrastructure${NC}"
+        fi
     fi
 
     echo -e "${GREEN}Deploying $app_name...${NC}"
