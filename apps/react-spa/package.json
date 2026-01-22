@@ -1,32 +1,32 @@
 {
-}
-  }
-    ]
-      "last 1 safari version"
-      "last 1 firefox version",
-      "last 1 chrome version",
-    "development": [
-    ],
-      "not op_mini all"
-      "not dead",
-      ">0.2%",
-    "production": [
-  "browserslist": {
-  },
-    "react-scripts": "5.0.1"
-  "devDependencies": {
-  },
-    "eject": "react-scripts eject"
-    "test": "react-scripts test",
-    "build": "react-scripts build",
-    "start": "react-scripts start",
-  "scripts": {
-  },
-    "axios": "^1.6.2"
-    "react-router-dom": "^6.20.1",
-    "react-dom": "^18.2.0",
-    "react": "^18.2.0",
-  "dependencies": {
-  "private": true,
-  "version": "1.0.0",
   "name": "react-spa",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "axios": "^1.6.2"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "devDependencies": {
+    "react-scripts": "5.0.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
