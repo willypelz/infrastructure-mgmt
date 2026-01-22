@@ -67,10 +67,17 @@ check_dns() {
 deploy_infrastructure() {
     echo -e "${GREEN}Deploying infrastructure...${NC}"
 
-    # Create network
-    docker network inspect web >/dev/null 2>&1 || docker network create web
+    # Remove existing network if it exists without proper labels
+    if docker network inspect web >/dev/null 2>&1; then
+        # Check if network has any containers
+        NETWORK_CONTAINERS=$(docker network inspect web --format='{{range .Containers}}{{.Name}} {{end}}')
+        if [ -z "$NETWORK_CONTAINERS" ]; then
+            echo "Removing existing 'web' network to recreate with proper labels..."
+            docker network rm web 2>/dev/null || true
+        fi
+    fi
 
-    # Deploy Traefik
+    # Deploy Traefik (will create network with proper labels)
     echo "Deploying Traefik..."
     cd "$PROJECT_ROOT"
     docker-compose up -d
