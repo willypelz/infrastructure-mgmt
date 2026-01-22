@@ -105,6 +105,12 @@ deploy_app() {
         exit 1
     fi
 
+    # Ensure the web network exists
+    if ! docker network inspect web >/dev/null 2>&1; then
+        echo -e "${YELLOW}Creating 'web' network...${NC}"
+        docker network create web
+    fi
+
     echo -e "${GREEN}Deploying $app_name...${NC}"
 
     cd "$app_path"
