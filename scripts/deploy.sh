@@ -80,17 +80,17 @@ deploy_infrastructure() {
     # Deploy Traefik (will create network with proper labels)
     echo "Deploying Traefik..."
     cd "$PROJECT_ROOT"
-    docker-compose up -d
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
 
     # Deploy Portainer
     echo "Deploying Portainer..."
     cd "$PROJECT_ROOT/infrastructure/portainer"
-    docker-compose up -d
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
 
     # Deploy Monitoring
     echo "Deploying Monitoring Stack..."
     cd "$PROJECT_ROOT/infrastructure/monitoring"
-    docker-compose up -d
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
 
     echo -e "${GREEN}✓ Infrastructure deployed${NC}"
 }
@@ -108,7 +108,7 @@ deploy_app() {
     echo -e "${GREEN}Deploying $app_name...${NC}"
 
     cd "$app_path"
-    docker-compose up -d --build
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d --build
 
     echo -e "${GREEN}✓ $app_name deployed${NC}"
 
@@ -117,7 +117,7 @@ deploy_app() {
     sleep 10
 
     # Show status
-    docker-compose ps
+    docker-compose --env-file "$PROJECT_ROOT/.env" ps
 }
 
 # Function to stop application
@@ -132,7 +132,7 @@ stop_app() {
 
     echo -e "${YELLOW}Stopping $app_name...${NC}"
     cd "$app_path"
-    docker-compose down
+    docker-compose --env-file "$PROJECT_ROOT/.env" down
     echo -e "${GREEN}✓ $app_name stopped${NC}"
 }
 
@@ -154,7 +154,7 @@ show_logs() {
     fi
 
     cd "$app_path"
-    docker-compose logs -f
+    docker-compose --env-file "$PROJECT_ROOT/.env" logs -f
 }
 
 # Function to list applications
