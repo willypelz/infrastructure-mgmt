@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  wordpress:
+    image: wordpress:latest
+    container_name: wordpress
+    restart: unless-stopped
+    networks:
+      - web
+      - wordpress-internal
+    environment:
+      WORDPRESS_DB_HOST: ${WORDPRESS_DB_HOST}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_CONFIG_EXTRA: |
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_MAX_MEMORY_LIMIT', '512M');
+      TZ: ${TZ:-UTC}
+    volumes:
+      - wordpress-data:/var/www/html
+      - ./php-config.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.rule=Host(`${WORDPRESS_SUBDOMAIN}.${DOMAIN}`)"
+      - "traefik.http.routers.wordpress.entrypoints=websecure"
+      - "traefik.http.routers.wordpress.tls.certresolver=letsencrypt"
+      - "traefik.http.services.wordpress.loadbalancer.server.port=80"
+      - "traefik.http.routers.wordpress.middlewares=global-ratelimit,security-headers,compress"
+      - "traefik.docker.network=web"
+    depends_on:
+      - wordpress-db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/wp-admin/install.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  wordpress-db:
+    image: mariadb:latest
+    container_name: wordpress-db
+    restart: unless-stopped
+    networks:
+      - wordpress-internal
+    environment:
+      MYSQL_ROOT_PASSWORD: ${WORDPRESS_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${WORDPRESS_DB_NAME}
+      MYSQL_USER: ${WORDPRESS_DB_USER}
+      MYSQL_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - wordpress-db-data:/var/lib/mysql
+      - ./db-backup:/backup
+    command: '--default-authentication-plugin=mysql_native_password'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${WORDPRESS_DB_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  wordpress-data:
+    name: wordpress-data
+  wordpress-db-data:
+    name: wordpress-db-data
+
+networks:
+  web:
+    external: true
+  wordpress-internal:
+    name: wordpress-internal
+    driver: bridge

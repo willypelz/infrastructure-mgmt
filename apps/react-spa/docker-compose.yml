@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  react-spa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: react-spa
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+      TZ: ${TZ:-UTC}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.react-spa.rule=Host(`${REACT_SUBDOMAIN}.${DOMAIN}`)"
+      - "traefik.http.routers.react-spa.entrypoints=websecure"
+      - "traefik.http.routers.react-spa.tls.certresolver=letsencrypt"
+      - "traefik.http.services.react-spa.loadbalancer.server.port=80"
+      - "traefik.http.routers.react-spa.middlewares=global-ratelimit,security-headers,compress"
+      - "traefik.docker.network=web"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  web:
+    external: true

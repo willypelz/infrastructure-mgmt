@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  nginx-proxy-manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '81:81'  # Admin interface
+    networks:
+      - web
+    environment:
+      DB_MYSQL_HOST: npm-db
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: ${NPM_DB_USER:-npm}
+      DB_MYSQL_PASSWORD: ${NPM_DB_PASSWORD:-changeme}
+      DB_MYSQL_NAME: ${NPM_DB_NAME:-npm}
+      DISABLE_IPV6: 'true'
+    volumes:
+      - npm-data:/data
+      - npm-letsencrypt:/etc/letsencrypt
+    depends_on:
+      - npm-db
+
+  npm-db:
+    image: 'mariadb:latest'
+    container_name: npm-db
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+      MYSQL_ROOT_PASSWORD: ${NPM_DB_ROOT_PASSWORD:-rootchangeme}
+      MYSQL_DATABASE: ${NPM_DB_NAME:-npm}
+      MYSQL_USER: ${NPM_DB_USER:-npm}
+      MYSQL_PASSWORD: ${NPM_DB_PASSWORD:-changeme}
+    volumes:
+      - npm-db-data:/var/lib/mysql
+
+volumes:
+  npm-data:
+    name: npm-data
+  npm-letsencrypt:
+    name: npm-letsencrypt
+  npm-db-data:
+    name: npm-db-data
+
+networks:
+  web:
+    name: ${DOCKER_NETWORK:-web}
+    driver: bridge

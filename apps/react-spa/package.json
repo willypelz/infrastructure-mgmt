@@ -1,0 +1,32 @@
+{
+}
+  }
+    ]
+      "last 1 safari version"
+      "last 1 firefox version",
+      "last 1 chrome version",
+    "development": [
+    ],
+      "not op_mini all"
+      "not dead",
+      ">0.2%",
+    "production": [
+  "browserslist": {
+  },
+    "react-scripts": "5.0.1"
+  "devDependencies": {
+  },
+    "eject": "react-scripts eject"
+    "test": "react-scripts test",
+    "build": "react-scripts build",
+    "start": "react-scripts start",
+  "scripts": {
+  },
+    "axios": "^1.6.2"
+    "react-router-dom": "^6.20.1",
+    "react-dom": "^18.2.0",
+    "react": "^18.2.0",
+  "dependencies": {
+  "private": true,
+  "version": "1.0.0",
+  "name": "react-spa",
