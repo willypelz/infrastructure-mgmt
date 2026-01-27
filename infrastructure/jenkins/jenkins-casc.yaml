@@ -1,7 +1,11 @@
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
-  numExecutors: 2
+  numExecutors: 0  # Changed from 2 to 0 to force use of agents (fixes security warning)
   mode: NORMAL
+
+  # Disable CLI over remoting for security
+  disabledAdministrativeMonitors:
+    - "jenkins.diagnostics.ReverseProxySetupMonitor"
 
   securityRealm:
     local:
