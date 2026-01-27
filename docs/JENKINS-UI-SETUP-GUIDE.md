@@ -435,6 +435,48 @@ The react-spa example is already in an `Applications` folder (configured via jen
 4. Review application startup logs
 5. Test container locally first
 
+### HTTP 403 Error: "No valid crumb was included in the request"
+
+**Problem:** Getting 403 error when trying to create new items in Jenkins UI
+
+**Cause:** CSRF protection (crumb issuer) not configured properly
+
+**Solution:**
+
+This has been fixed in the latest jenkins-casc.yaml configuration. If you're still seeing this error:
+
+1. **Restart Jenkins:**
+   ```bash
+   docker restart jenkins
+   ```
+
+2. **Clear browser cache and cookies** for Jenkins URL
+
+3. **Verify crumb issuer is enabled:**
+   - Go to **Manage Jenkins** → **Configure Global Security**
+   - Under **CSRF Protection**, ensure **Prevent Cross Site Request Forgery exploits** is checked
+   - Select **Default Crumb Issuer**
+   - Check **Enable proxy compatibility**
+   - Click **Save**
+
+4. **If using reverse proxy (Traefik):**
+   The configuration now includes `excludeClientIPFromCrumb: true` which is required for proper operation behind a proxy.
+
+5. **Restart Jenkins again:**
+   ```bash
+   docker restart jenkins
+   ```
+
+The jenkins-casc.yaml now includes:
+```yaml
+security:
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: true
+```
+
+This configuration is applied automatically on Jenkins startup.
+
 ## Next Steps
 
 After setting up your pipeline:

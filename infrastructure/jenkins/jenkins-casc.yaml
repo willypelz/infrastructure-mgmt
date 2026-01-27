@@ -43,6 +43,12 @@ security:
       - global:
           strategy: triggeringUsersAuthorizationStrategy
 
+  # CSRF Protection (Crumb Issuer)
+  # Fixes "No valid crumb was included in the request" errors
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: true
+
 credentials:
   system:
     domainCredentials:
@@ -53,6 +59,11 @@ unclassified:
     url: "https://${JENKINS_SUBDOMAIN}.${DOMAIN}/"
     adminAddress: "${SSL_EMAIL}"
 
+  # Reverse Proxy Configuration (for Traefik)
+  globalLibraries:
+    libraries: []
+
+  # GitHub Plugin Configuration
   gitHubPluginConfig:
     hookUrl: "https://${JENKINS_SUBDOMAIN}.${DOMAIN}/github-webhook/"
 
