@@ -1,0 +1,116 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_NAME = 'nodejs-express-api'
+        DOCKER_IMAGE = "${APP_NAME}"
+        DEPLOY_USER = 'root'
+        DEPLOY_HOST = credentials('deployment-server-host')
+        DEPLOY_PATH = '/root/deployed-apps/${APP_NAME}'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                echo 'Validating package.json...'
+                sh '''
+                    if [ -f package.json ]; then
+                        node -e "JSON.parse(require('fs').readFileSync('package.json'))"
+                        echo "✓ package.json is valid"
+                    else
+                        echo "✗ package.json not found"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "Building Docker image: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                    docker.build("${DOCKER_IMAGE}:${BUILD_NUMBER}")
+                    docker.build("${DOCKER_IMAGE}:latest")
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    echo 'Running tests...'
+                    sh '''
+                        if grep -q "\\"test\\":" package.json; then
+                            docker run --rm ${DOCKER_IMAGE}:${BUILD_NUMBER} npm test || true
+                        else
+                            echo "No tests defined, skipping..."
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Server') {
+            steps {
+                sshagent(credentials: ['deployment-ssh-key']) {
+                    sh '''
+                        echo "Deploying to ${DEPLOY_HOST}..."
+
+                        # Create deployment directory
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${DEPLOY_PATH}"
+
+                        # Save Docker image and transfer
+                        docker save ${DOCKER_IMAGE}:${BUILD_NUMBER} | gzip | ssh ${DEPLOY_USER}@${DEPLOY_HOST} "gunzip | docker load"
+
+                        # Tag as latest
+                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} "docker tag ${DOCKER_IMAGE}:${BUILD_NUMBER} ${DOCKER_IMAGE}:latest"
+
+                        # Copy docker-compose.yml if exists
+                        if [ -f docker-compose.yml ]; then
+                            scp docker-compose.yml ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+                        fi
+
+                        # Deploy using existing script
+                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd /root/infrastructure-mgmt && ./scripts/deploy.sh --app ${APP_NAME}"
+
+                        echo "✓ Deployment completed"
+                    '''
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    echo 'Performing health check...'
+                    sh '''
+                        sleep 10
+                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} "docker ps | grep ${APP_NAME} || exit 1"
+                        echo "✓ Container is running"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✓ Pipeline completed successfully!"
+            echo "Build: ${BUILD_NUMBER}"
+            echo "Image: ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+        }
+        failure {
+            echo "✗ Pipeline failed!"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

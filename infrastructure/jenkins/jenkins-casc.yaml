@@ -1,0 +1,88 @@
+jenkins:
+  systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
+  numExecutors: 2
+  mode: NORMAL
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_USER:-admin}"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    globalMatrix:
+      permissions:
+        - "Overall/Administer:${JENKINS_ADMIN_USER:-admin}"
+        - "Overall/Read:authenticated"
+
+  remotingSecurity:
+    enabled: true
+
+  clouds:
+    - docker:
+        name: "docker"
+        dockerApi:
+          dockerHost:
+            uri: "unix:///var/run/docker.sock"
+        templates:
+          - labelString: "docker-agent"
+            dockerTemplateBase:
+              image: "jenkins/inbound-agent:latest"
+            remoteFs: "/home/jenkins/agent"
+            connector:
+              attach:
+                user: "jenkins"
+            instanceCapStr: "10"
+            retentionStrategy:
+              idleMinutes: 5
+
+security:
+  queueItemAuthenticator:
+    authenticators:
+      - global:
+          strategy: triggeringUsersAuthorizationStrategy
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials: []
+
+unclassified:
+  location:
+    url: "https://${JENKINS_SUBDOMAIN}.${DOMAIN}/"
+    adminAddress: "${SSL_EMAIL}"
+
+  gitHubPluginConfig:
+    hookUrl: "https://${JENKINS_SUBDOMAIN}.${DOMAIN}/github-webhook/"
+
+jobs:
+  - script: >
+      folder('Applications') {
+        displayName('Application Deployments')
+        description('CI/CD pipelines for all applications')
+      }
+
+  - script: >
+      pipelineJob('Applications/react-spa') {
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/willypelz/react-spa.git')
+                }
+                branches('*/main', '*/master')
+              }
+            }
+            scriptPath('Jenkinsfile')
+          }
+        }
+        triggers {
+          githubPush()
+        }
+      }
+
+# Additional applications (wordpress-docker-app, nodejs-express-api, php-laravel, flask-api)
+# should be configured via Jenkins UI for better scalability.
+# See docs/JENKINS-UI-SETUP-GUIDE.md for step-by-step instructions.

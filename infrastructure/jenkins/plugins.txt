@@ -1,0 +1,17 @@
+git:latest
+workflow-aggregator:latest
+docker-workflow:latest
+docker-plugin:latest
+configuration-as-code:latest
+credentials-binding:latest
+ssh-agent:latest
+github:latest
+github-branch-source:latest
+pipeline-github-lib:latest
+blueocean:latest
+generic-webhook-trigger:latest
+timestamper:latest
+ws-cleanup:latest
+ansicolor:latest
+build-timeout:latest
+pipeline-stage-view:latest

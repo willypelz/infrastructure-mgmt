@@ -6,6 +6,7 @@ Complete production-ready Docker infrastructure for hosting multiple application
 
 - **Reverse Proxy**: Traefik v2 with automatic service discovery (alternative: Nginx Proxy Manager)
 - **SSL Certificates**: Automatic Let's Encrypt SSL with auto-renewal
+- **CI/CD Pipeline**: Jenkins with GitHub webhooks for automated deployments
 - **Container Management**: Portainer web interface
 - **Monitoring Stack**: Prometheus + Grafana + Loki for metrics and logs
 - **Automated Backups**: Hourly database backups + daily full backups to DigitalOcean Spaces
@@ -18,6 +19,7 @@ Complete production-ready Docker infrastructure for hosting multiple application
 - [Quick Start](#quick-start)
 - [DNS Configuration](#dns-configuration)
 - [Deployment](#deployment)
+- [CI/CD with Jenkins](#cicd-with-jenkins)
 - [Applications](#applications)
 - [Monitoring](#monitoring)
 - [Backups](#backups)
@@ -32,6 +34,7 @@ Internet
 Traefik (Port 80/443) ← SSL Certificates (Let's Encrypt)
    ↓
    ├─→ Portainer        (portainer.domain.com)
+   ├─→ Jenkins          (jenkins.domain.com) ← GitHub Webhooks
    ├─→ Grafana          (grafana.domain.com)
    ├─→ Prometheus       (prometheus.domain.com)
    ├─→ WordPress        (blog.domain.com)
@@ -115,6 +118,7 @@ Configure these DNS A records pointing to your server IP:
 |-----------|---------|
 | `traefik.domain.com` | Traefik Dashboard |
 | `portainer.domain.com` | Container Management |
+| `jenkins.domain.com` | CI/CD Pipeline |
 | `grafana.domain.com` | Monitoring Dashboard |
 | `prometheus.domain.com` | Metrics Database |
 | `alerts.domain.com` | Alert Manager |
@@ -137,25 +141,21 @@ Configure these DNS A records pointing to your server IP:
 # Infrastructure only
 ./scripts/deploy.sh --infrastructure
 
-# Restart a service
-./scripts/deploy.sh --restart portainer
-
-# View logs
-./scripts/deploy.sh --logs traefik
+# Individual components
+./scripts/deploy.sh --traefik
+./scripts/deploy.sh --portainer
+./scripts/deploy.sh --jenkins
+./scripts/deploy.sh --monitoring
 ```
 
-### Individual Applications
+### Applications
 
-```bash
-# Deploy WordPress
-./scripts/deploy.sh --app wordpress
+**Applications are now deployed via Jenkins CI/CD pipelines.**
 
-# Stop Laravel
-./scripts/deploy.sh --stop php-laravel
-
-# List available apps
-./scripts/deploy.sh --list
-```
+- Access Jenkins: `https://jenkins.${DOMAIN}`
+- react-spa is pre-configured as example
+- Add other apps via Jenkins UI
+- See: [docs/JENKINS-UI-SETUP-GUIDE.md](docs/JENKINS-UI-SETUP-GUIDE.md)
 
 ## 🔧 Applications
 
@@ -189,6 +189,60 @@ Configure these DNS A records pointing to your server IP:
 - **Database:** MySQL
 - **Health:** `/health`
 - **Location:** `apps/php-laravel/`
+
+## 🚀 CI/CD with Jenkins
+
+### Overview
+
+Jenkins provides automated CI/CD pipelines for deploying applications from separate GitHub repositories with webhook integration.
+
+**Access:** `https://jenkins.${DOMAIN}`
+
+### Quick Setup
+
+```bash
+# Deploy Jenkins
+./scripts/deploy.sh --jenkins
+
+# Run initial setup
+./scripts/setup-jenkins.sh
+```
+
+### Features
+
+- ✅ **Automated Deployments** - Push to GitHub triggers automatic builds
+- ✅ **Docker Integration** - Build and deploy Docker images
+- ✅ **Automatic Subdomain Routing** - Traefik automatically routes to deployed apps
+- ✅ **GitHub Webhooks** - Automatic trigger on git push
+- ✅ **SSH Deployment** - Secure deployment to your server
+- ✅ **Health Checks** - Automatic verification after deployment
+- ✅ **Scalable** - Easy to add new applications via Jenkins UI
+
+### Application Repositories
+
+Applications are maintained in separate repositories for better separation of concerns:
+
+1. **react-spa** - https://github.com/willypelz/react-spa.git **(pre-configured)**
+2. **wordpress-docker-app** - https://github.com/willypelz/wordpress-docker-app.git
+3. **nodejs-express-api** - https://github.com/willypelz/nodejs-express-api.git
+4. **php-laravel** - https://github.com/willypelz/php-laravel.git
+5. **flask-api** - https://github.com/willypelz/flask-api.git
+
+### Setup Steps
+
+1. **react-spa is pre-configured** - Use as reference example
+2. **Add additional apps via Jenkins UI** - See detailed UI guide below
+3. **Configure credentials** (deployment-server-host and deployment-ssh-key)
+4. **Set up GitHub webhooks** (Webhook URL: `https://jenkins.${DOMAIN}/github-webhook/`)
+5. **Each repo needs Jenkinsfile** (examples in `infrastructure/jenkins/jenkinsfiles/`)
+
+### Documentation
+
+- **UI Setup Guide:** [docs/JENKINS-UI-SETUP-GUIDE.md](docs/JENKINS-UI-SETUP-GUIDE.md) ← **Start here for adding apps**
+- **Subdomain Routing:** [docs/SUBDOMAIN-ROUTING-GUIDE.md](docs/SUBDOMAIN-ROUTING-GUIDE.md)
+- **App Repository Setup:** [docs/APP-REPOSITORY-SETUP.md](docs/APP-REPOSITORY-SETUP.md)
+- **Deployment Workflow:** [docs/DEPLOYMENT-WORKFLOW.md](docs/DEPLOYMENT-WORKFLOW.md)
+- **Jenkins README:** [infrastructure/jenkins/README.md](infrastructure/jenkins/README.md)
 
 ## 📊 Monitoring
 

@@ -292,28 +292,54 @@ Congratulations! You now have:
 
 ## Next Steps
 
+### Deploy Applications via Jenkins
+
+Applications are now maintained in separate GitHub repositories and deployed via Jenkins:
+
+**Pre-configured:**
+- **react-spa** is ready to use - just push to trigger deployment
+
+**Add More Applications:**
+1. Access Jenkins at `https://jenkins.yourdomain.com`
+2. Create new pipeline via Jenkins UI
+3. Configure with GitHub repository URL
+4. See: [docs/JENKINS-UI-SETUP-GUIDE.md](docs/JENKINS-UI-SETUP-GUIDE.md)
+
+**Available Application Repositories:**
+- https://github.com/willypelz/react-spa.git (pre-configured)
+- https://github.com/willypelz/wordpress-docker-app.git
+- https://github.com/willypelz/nodejs-express-api.git
+- https://github.com/willypelz/php-laravel.git
+- https://github.com/willypelz/flask-api.git
+
 ### Customize Your Applications
 
-Each app is in `apps/[app-name]/`. Modify and redeploy:
+**To modify an application:**
 
-```bash
-cd /opt/appdeployment/apps/wordpress
-# Make changes to docker-compose.yml
-./scripts/deploy.sh --restart wordpress
-```
+1. Fork or clone the application repository:
+   ```bash
+   git clone https://github.com/willypelz/react-spa.git
+   cd react-spa
+   ```
 
-### Add Your Own Applications
+2. Make your changes to the application code
 
-1. Create directory: `mkdir apps/my-app`
-2. Add `docker-compose.yml` with Traefik labels
-3. Deploy: `./scripts/deploy.sh --app my-app`
+3. Commit and push:
+   ```bash
+   git add .
+   git commit -m "Updated application"
+   git push
+   ```
 
-See existing apps for examples.
+4. Jenkins automatically deploys via webhook! 🚀
+
+**See:** [docs/APP-REPOSITORY-SETUP.md](docs/APP-REPOSITORY-SETUP.md) for repository structure
 
 ### Monitor Your Infrastructure
 
 - Check container health in Portainer
 - View metrics in Grafana
+- Monitor Jenkins builds
 - Set up email alerts in Alertmanager
 
 ### Secure Your Setup

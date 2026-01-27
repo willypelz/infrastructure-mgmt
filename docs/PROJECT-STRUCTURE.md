@@ -16,55 +16,29 @@ appdeployment/
 │       ├── docker-compose.yml            # NPM setup
 │       └── README.md                     # NPM documentation
 │
-├── apps/                                 # Application containers
-│   ├── wordpress/
-│   │   ├── docker-compose.yml
-│   │   ├── php-config.ini
-│   │   └── README.md
-│   │
-│   ├── nodejs-express-api/
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   └── app/
-│   │       ├── package.json
-│   │       └── server.js
-│   │
-│   ├── flask-api/
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   └── app/
-│   │       ├── requirements.txt
-│   │       └── app.py
-│   │
-│   ├── react-spa/
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   ├── nginx.conf
-│   │   ├── package.json
-│   │   ├── public/
-│   │   │   └── index.html
-│   │   └── src/
-│   │       ├── App.js
-│   │       ├── App.css
-│   │       ├── index.js
-│   │       └── index.css
-│   │
-│   └── php-laravel/
-│       ├── docker-compose.yml
-│       ├── Dockerfile
-│       ├── nginx.conf
-│       ├── start.sh
-│       └── app/
-│           └── README.md                 # Laravel installation guide
-│
 ├── docs/                                 # Documentation
 │   ├── DEPLOYMENT.md                     # Deployment guide
 │   ├── BACKUP-RESTORE.md                 # Backup procedures
+│   ├── JENKINS-UI-SETUP-GUIDE.md         # Jenkins UI setup (NEW)
+│   ├── SUBDOMAIN-ROUTING-GUIDE.md        # Subdomain routing explained (NEW)
+│   ├── APP-REPOSITORY-SETUP.md           # App repository structure (NEW)
 │   ├── SECURITY.md                       # Security guide
 │   ├── MONITORING.md                     # Monitoring setup
 │   └── QUICK-REFERENCE.md                # Quick commands
 │
 ├── infrastructure/                       # Infrastructure services
+│   ├── jenkins/                          # CI/CD Server
+│   │   ├── docker-compose.yml
+│   │   ├── jenkins-casc.yaml             # Configuration as Code
+│   │   ├── plugins.txt
+│   │   ├── README.md
+│   │   └── jenkinsfiles/                 # Jenkinsfile templates
+│   │       ├── Jenkinsfile.react
+│   │       ├── Jenkinsfile.nodejs
+│   │       ├── Jenkinsfile.laravel
+│   │       ├── Jenkinsfile.flask
+│   │       └── Jenkinsfile.wordpress
+│   │
 │   ├── portainer/
 │   │   └── docker-compose.yml            # Container management UI
 │   │
@@ -110,14 +84,46 @@ appdeployment/
 - **`docker-compose.yml`** - Traefik reverse proxy with SSL, rate limiting, security headers
 - **`README.md`** - Main project documentation and quick start guide
 
-### Applications (`apps/`)
+### Applications (Separate Repositories)
 
-Each application has:
-- `docker-compose.yml` - Container orchestration with Traefik labels
-- `Dockerfile` - Custom container build (where applicable)
-- Application-specific configs
-- Health check endpoints
-- Dedicated networks for security
+**Applications are now maintained in separate GitHub repositories for better separation of concerns:**
+
+1. **react-spa** - https://github.com/willypelz/react-spa.git
+   - React SPA with Nginx
+   - Pre-configured in Jenkins ✅
+   - Deployed to `www.${DOMAIN}`
+
+2. **wordpress-docker-app** - https://github.com/willypelz/wordpress-docker-app.git
+   - WordPress with MariaDB
+   - Custom themes/plugins support
+   - Deployed to `blog.${DOMAIN}`
+
+3. **nodejs-express-api** - https://github.com/willypelz/nodejs-express-api.git
+   - Express API with PostgreSQL
+   - Health and metrics endpoints
+   - Deployed to `api.${DOMAIN}`
+
+4. **php-laravel** - https://github.com/willypelz/php-laravel.git
+   - Laravel with MySQL
+   - Migrations support
+   - Deployed to `shop.${DOMAIN}`
+
+5. **flask-api** - https://github.com/willypelz/flask-api.git
+   - Flask API with Redis
+   - Health and metrics endpoints
+   - Deployed to `app.${DOMAIN}`
+
+**Each repository contains:**
+- `Jenkinsfile` - CI/CD pipeline definition
+- `docker-compose.yml` - Services with Traefik labels
+- `Dockerfile` - Application image build
+- `.env.example` - Environment variable template
+
+**Deployment:**
+- Deployed via Jenkins CI/CD pipelines
+- Automatic subdomain routing via Traefik
+- SSL certificates from Let's Encrypt
+- See: [docs/JENKINS-UI-SETUP-GUIDE.md](JENKINS-UI-SETUP-GUIDE.md)
 
 ### Infrastructure (`infrastructure/`)
 

@@ -1,0 +1,75 @@
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
+    restart: unless-stopped
+    privileged: true
+    user: root
+    networks:
+      - web
+      - jenkins-internal
+    ports:
+      - "50000:50000"  # For Jenkins agents
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+      - JENKINS_OPTS=--prefix=/
+      - TZ=${TZ:-UTC}
+      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_USER:-admin}
+      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins-casc.yaml:/var/jenkins_home/casc.yaml:ro
+      - ./plugins.txt:/usr/share/jenkins/ref/plugins.txt:ro
+    labels:
+      - "traefik.enable=true"
+
+      # HTTP Router
+      - "traefik.http.routers.jenkins.rule=Host(`${JENKINS_SUBDOMAIN}.${DOMAIN}`)"
+      - "traefik.http.routers.jenkins.entrypoints=websecure"
+      - "traefik.http.routers.jenkins.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.jenkins.service=jenkins"
+
+      # Service
+      - "traefik.http.services.jenkins.loadbalancer.server.port=8080"
+
+      # Middlewares
+      - "traefik.http.routers.jenkins.middlewares=jenkins-headers,compress"
+
+      # Headers for Jenkins
+      - "traefik.http.middlewares.jenkins-headers.headers.customRequestHeaders.X-Forwarded-Proto=https"
+      - "traefik.http.middlewares.jenkins-headers.headers.customRequestHeaders.X-Forwarded-Port=443"
+      - "traefik.http.middlewares.jenkins-headers.headers.sslProxyHeaders.X-Forwarded-Proto=https"
+
+      # Network specification
+      - "traefik.docker.network=web"
+
+  jenkins-docker:
+    image: docker:dind
+    container_name: jenkins-docker
+    restart: unless-stopped
+    privileged: true
+    networks:
+      jenkins-internal:
+        aliases:
+          - docker
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+      - TZ=${TZ:-UTC}
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    command: --storage-driver=overlay2
+
+networks:
+  web:
+    external: true
+  jenkins-internal:
+    name: jenkins-internal
+    driver: bridge
+
+volumes:
+  jenkins-data:
+    name: jenkins-data
+  jenkins-docker-certs:
+    name: jenkins-docker-certs

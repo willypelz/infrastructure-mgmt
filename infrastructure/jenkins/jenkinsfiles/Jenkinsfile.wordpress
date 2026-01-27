@@ -1,0 +1,104 @@
+pipeline {
+    agent any
+
+    environment {
+        APP_NAME = 'wordpress-docker-app'
+        DOCKER_IMAGE = "${APP_NAME}"
+        DEPLOY_USER = 'root'
+        DEPLOY_HOST = credentials('deployment-server-host')
+        DEPLOY_PATH = '/root/deployed-apps/${APP_NAME}'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Checking out source code...'
+                checkout scm
+            }
+        }
+
+        stage('Validate') {
+            steps {
+                echo 'Validating docker-compose.yml...'
+                sh '''
+                    if [ -f docker-compose.yml ]; then
+                        docker-compose config -q
+                        echo "✓ docker-compose.yml is valid"
+                    else
+                        echo "✗ docker-compose.yml not found"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    echo "Building Docker images..."
+                    sh '''
+                        docker-compose build
+                        echo "✓ Docker images built successfully"
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Server') {
+            steps {
+                sshagent(credentials: ['deployment-ssh-key']) {
+                    sh '''
+                        echo "Deploying to ${DEPLOY_HOST}..."
+
+                        # Create deployment directory
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${DEPLOY_PATH}"
+
+                        # Copy docker-compose and related files
+                        scp docker-compose.yml ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+
+                        if [ -f .env.example ]; then
+                            scp .env.example ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/
+                        fi
+
+                        # Transfer custom themes/plugins if exist
+                        if [ -d wp-content ]; then
+                            ssh ${DEPLOY_USER}@${DEPLOY_HOST} "mkdir -p ${DEPLOY_PATH}/wp-content"
+                            scp -r wp-content/* ${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/wp-content/
+                        fi
+
+                        # Deploy using existing script
+                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} "cd /root/infrastructure-mgmt && ./scripts/deploy.sh --app ${APP_NAME}"
+
+                        echo "✓ Deployment completed"
+                    '''
+                }
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                script {
+                    echo 'Performing health check...'
+                    sh '''
+                        sleep 15
+                        ssh ${DEPLOY_USER}@${DEPLOY_HOST} "docker ps | grep wordpress || exit 1"
+                        echo "✓ WordPress container is running"
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✓ Pipeline completed successfully!"
+            echo "Build: ${BUILD_NUMBER}"
+        }
+        failure {
+            echo "✗ Pipeline failed!"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}

@@ -32,9 +32,10 @@ usage() {
     echo ""
     echo "Options:"
     echo "  --all                Deploy all infrastructure and applications"
-    echo "  --infrastructure     Deploy all infrastructure (Traefik, Portainer, Monitoring)"
+    echo "  --infrastructure     Deploy all infrastructure (Traefik, Portainer, Monitoring, Jenkins)"
     echo "  --traefik            Deploy only Traefik reverse proxy"
     echo "  --portainer          Deploy only Portainer (Docker management UI)"
+    echo "  --jenkins            Deploy only Jenkins CI/CD server"
     echo "  --monitoring         Deploy only monitoring stack (Prometheus, Grafana, etc.)"
     echo "  --app APP_NAME       Deploy specific application"
     echo "  --stop APP_NAME      Stop specific application"
@@ -47,6 +48,7 @@ usage() {
     echo "  $0 --infrastructure"
     echo "  $0 --traefik"
     echo "  $0 --portainer"
+    echo "  $0 --jenkins"
     echo "  $0 --monitoring"
     echo "  $0 --app wordpress"
     echo "  $0 --logs nodejs-api"
@@ -115,6 +117,11 @@ deploy_infrastructure() {
     cd "$PROJECT_ROOT/infrastructure/portainer"
     docker-compose --env-file "$PROJECT_ROOT/.env" up -d
 
+    # Deploy Jenkins
+    echo "Deploying Jenkins CI/CD..."
+    cd "$PROJECT_ROOT/infrastructure/jenkins"
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
+
     # Deploy Monitoring
     echo "Deploying Monitoring Stack..."
     cd "$PROJECT_ROOT/infrastructure/monitoring"
@@ -176,6 +183,33 @@ deploy_portainer() {
     echo ""
     echo "Access Portainer at: https://${PORTAINER_SUBDOMAIN}.${DOMAIN}"
     echo "First login will prompt you to create admin user"
+}
+
+# Function to deploy only Jenkins
+deploy_jenkins() {
+    echo -e "${GREEN}Deploying Jenkins CI/CD...${NC}"
+
+    # Ensure network exists
+    if ! docker network inspect web >/dev/null 2>&1; then
+        echo -e "${YELLOW}Creating 'web' network...${NC}"
+        docker network create web
+    fi
+
+    cd "$PROJECT_ROOT/infrastructure/jenkins"
+    docker-compose --env-file "$PROJECT_ROOT/.env" up -d
+
+    echo -e "${GREEN}✓ Jenkins deployed${NC}"
+    echo ""
+    echo "Access Jenkins at: https://${JENKINS_SUBDOMAIN}.${DOMAIN}"
+    echo "Jenkins credentials:"
+    echo "  Username: ${JENKINS_ADMIN_USER}"
+    echo "  Password: ${JENKINS_ADMIN_PASSWORD}"
+    echo ""
+    echo "To configure GitHub webhooks, use:"
+    echo "  Webhook URL: https://${JENKINS_SUBDOMAIN}.${DOMAIN}/github-webhook/"
+    echo ""
+    echo "Example Jenkinsfiles are available in:"
+    echo "  infrastructure/jenkins/jenkinsfiles/"
 }
 
 # Function to deploy only Monitoring stack
@@ -303,12 +337,18 @@ fi
 case "$1" in
     --all)
         deploy_infrastructure
-        for app in "$PROJECT_ROOT/apps/"*; do
-            if [ -d "$app" ]; then
-                deploy_app "$(basename "$app")"
-            fi
-        done
-        echo -e "${GREEN}✓ All services deployed${NC}"
+        echo ""
+        echo -e "${GREEN}✓ All infrastructure services deployed${NC}"
+        echo ""
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo -e "${YELLOW}Applications are now deployed separately via Jenkins CI/CD${NC}"
+        echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+        echo ""
+        echo "To deploy applications:"
+        echo "  1. Access Jenkins at https://jenkins.${DOMAIN}"
+        echo "  2. Configure pipelines via Jenkins UI"
+        echo "  3. See: docs/JENKINS-UI-SETUP-GUIDE.md"
+        echo ""
         ;;
     --infrastructure)
         deploy_infrastructure
@@ -318,6 +358,9 @@ case "$1" in
         ;;
     --portainer)
         deploy_portainer
+        ;;
+    --jenkins)
+        deploy_jenkins
         ;;
     --monitoring)
         deploy_monitoring

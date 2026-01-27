@@ -98,12 +98,19 @@ restore_full() {
     echo -e "${YELLOW}Stopping all containers...${NC}"
     cd "$PROJECT_ROOT"
     docker-compose down
-    for app in apps/*/; do
-        if [ -f "${app}docker-compose.yml" ]; then
-            cd "$PROJECT_ROOT/$app"
-            docker-compose down
-        fi
-    done
+
+    # Stop local apps if they exist (legacy support)
+    if [ -d "$PROJECT_ROOT/apps" ]; then
+        echo -e "${YELLOW}Stopping local apps (if any)...${NC}"
+        for app in apps/*/; do
+            if [ -f "${app}docker-compose.yml" ]; then
+                cd "$PROJECT_ROOT/$app"
+                docker-compose down
+            fi
+        done
+    else
+        echo -e "${YELLOW}Note: Apps are now in separate repositories (no local apps to stop)${NC}"
+    fi
 
     # Extract backup
     TEMP_DIR=$(mktemp -d)

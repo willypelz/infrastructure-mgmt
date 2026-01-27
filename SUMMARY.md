@@ -80,24 +80,29 @@ appdeployment/
 ├── README.md                       # Main documentation
 ├── GETTING-STARTED.md              # First-time setup guide
 │
-├── apps/                           # 5 example applications
-│   ├── wordpress/
+├── infrastructure/                 # Infrastructure services
+│   ├── jenkins/                    # CI/CD server
 │   │   ├── docker-compose.yml
-│   │   ├── php-config.ini
-│   │   └── README.md
-│   ├── nodejs-express-api/
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   └── app/ (package.json, server.js)
-│   ├── flask-api/
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   └── app/ (requirements.txt, app.py)
-│   ├── react-spa/
-│   │   ├── docker-compose.yml
-│   │   ├── Dockerfile
-│   │   ├── nginx.conf
-│   │   └── src/ (React application)
+│   │   ├── jenkins-casc.yaml
+│   │   └── jenkinsfiles/           # Pipeline templates
+│   ├── portainer/
+│   ├── monitoring/
+│
+├── scripts/                        # Automation scripts
+├── docs/                          # Documentation
+│   ├── JENKINS-UI-SETUP-GUIDE.md   # Add apps via Jenkins UI
+│   ├── SUBDOMAIN-ROUTING-GUIDE.md  # Traefik routing explained
+│   └── APP-REPOSITORY-SETUP.md     # App repo structure
+│
+└── alternative-configs/           # Alternative configurations
+
+# Applications (Separate Repositories)
+# Deployed via Jenkins CI/CD pipelines:
+# - https://github.com/willypelz/react-spa.git (pre-configured)
+# - https://github.com/willypelz/wordpress-docker-app.git
+# - https://github.com/willypelz/nodejs-express-api.git
+# - https://github.com/willypelz/php-laravel.git
+# - https://github.com/willypelz/flask-api.git
 │   └── php-laravel/
 │       ├── docker-compose.yml
 │       ├── Dockerfile
@@ -383,6 +388,9 @@ MIT License - Free for personal and commercial use
 
 ---
 
-**Questions?** Check the documentation in the `docs/` folder or review the example applications in `apps/`.
+**Questions?** Check the documentation in the `docs/` folder, especially:
+- `docs/JENKINS-UI-SETUP-GUIDE.md` - For adding applications
+- `docs/SUBDOMAIN-ROUTING-GUIDE.md` - For understanding routing
+- `docs/APP-REPOSITORY-SETUP.md` - For preparing app repositories
 
 **Happy deploying! 🎉**
