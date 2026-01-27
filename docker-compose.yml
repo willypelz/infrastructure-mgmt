@@ -27,6 +27,10 @@ services:
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
 
+      # CRITICAL: Trust forwarded headers for Jenkins CSRF compatibility
+      - --entrypoints.websecure.forwardedHeaders.trustedIPs=0.0.0.0/0
+      - --entrypoints.web.forwardedHeaders.trustedIPs=0.0.0.0/0
+
       # HTTP to HTTPS redirect
       - --entrypoints.web.http.redirections.entrypoint.to=websecure
       - --entrypoints.web.http.redirections.entrypoint.scheme=https
